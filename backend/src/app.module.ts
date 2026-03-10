@@ -7,7 +7,7 @@ import { OrdersModule } from './orders/orders.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb://localhost:27017/tp02'),
+    MongooseModule.forRoot(process.env.MONGO_URI || 'mongodb+srv://sanasokitc2023_db_user:UMZlZvGWb7uP1lnt@receiptsdb.h1lw9da.mongodb.net/?appName=ReceiptsDB'),
     ReceiptsModule,
     OrdersModule,
   ],
