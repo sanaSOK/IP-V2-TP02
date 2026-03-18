@@ -2,7 +2,7 @@
   <div>
     <header class="navbar">
       <div class="container">
-        <h1>TP02 Dashboard</h1>
+        <h1>TP02-IP</h1>
         <nav>
           <router-link to="/receipts">Receipts</router-link>
           <router-link to="/orders">Orders</router-link>

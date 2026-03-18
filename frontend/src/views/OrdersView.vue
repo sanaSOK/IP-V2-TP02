@@ -3,7 +3,8 @@ import { ref, onMounted } from 'vue'
 import api from '../api'
 
 interface Order {
-  id?: number
+  _id?: string
+  id?: string
   item: string
   quantity: number
 }
@@ -14,6 +15,10 @@ const success = ref('')
 
 const formItem = ref('')
 const formQuantity = ref<number | null>(null)
+
+const editingId = ref<string | null>(null)
+const editingItem = ref('')
+const editingQuantity = ref<number | null>(null)
 
 async function loadOrders() {
   try {
@@ -40,6 +45,49 @@ async function createOrder() {
   } catch (e: any) {
     const msg = e.response?.data?.message
     error.value = Array.isArray(msg) ? msg.join(', ') : msg || 'Failed to create order'
+  }
+}
+
+function startEdit(o: Order) {
+  editingId.value = o._id || o.id || null
+  editingItem.value = o.item
+  editingQuantity.value = o.quantity
+}
+
+function cancelEdit() {
+  editingId.value = null
+  editingItem.value = ''
+  editingQuantity.value = null
+}
+
+async function saveEdit() {
+  if (!editingId.value) return
+  try {
+    error.value = ''
+    success.value = ''
+    await api.patch(`/orders/${editingId.value}`, {
+      item: editingItem.value,
+      quantity: editingQuantity.value,
+    })
+    success.value = 'Order updated'
+    cancelEdit()
+    await loadOrders()
+  } catch (e: any) {
+    const msg = e.response?.data?.message
+    error.value = Array.isArray(msg) ? msg.join(', ') : msg || 'Failed to update order'
+  }
+}
+
+async function deleteOrder(id: string) {
+  if (!confirm('Delete this order?')) return
+  try {
+    error.value = ''
+    success.value = ''
+    await api.delete(`/orders/${id}`)
+    success.value = 'Order deleted'
+    await loadOrders()
+  } catch (e: any) {
+    error.value = e.response?.data?.message || 'Failed to delete order'
   }
 }
 
@@ -81,13 +129,30 @@ onMounted(loadOrders)
             <th>#</th>
             <th>Item</th>
             <th>Quantity</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(o, index) in orders" :key="index">
+          <tr v-for="(o, index) in orders" :key="o._id || o.id || index">
             <td>{{ index + 1 }}</td>
-            <td>{{ o.item }}</td>
-            <td>{{ o.quantity }}</td>
+            <td v-if="editingId !== (o._id || o.id)">{{ o.item }}</td>
+            <td v-else>
+              <input v-model="editingItem" />
+            </td>
+            <td v-if="editingId !== (o._id || o.id)">{{ o.quantity }}</td>
+            <td v-else>
+              <input v-model.number="editingQuantity" type="number" min="1" />
+            </td>
+            <td>
+              <div v-if="editingId !== (o._id || o.id)">
+                <button class="btn btn-secondary" @click="startEdit(o)">Edit</button>
+                <button class="btn btn-danger" @click="deleteOrder(o._id || o.id)">Delete</button>
+              </div>
+              <div v-else>
+                <button class="btn btn-primary" @click="saveEdit">Save</button>
+                <button class="btn" @click="cancelEdit">Cancel</button>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
