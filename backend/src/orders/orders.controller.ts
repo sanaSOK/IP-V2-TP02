@@ -18,12 +18,15 @@ export class OrdersController {
   }
 
   @Post()
-  create(@Body() body: { item: string; quantity: number }) {
+  create(@Body() body: { item: string; quantity: number; unitPrice?: number }) {
     return this.ordersService.create(body);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: { item?: string; quantity?: number }) {
+  update(
+    @Param('id') id: string,
+    @Body() body: { item?: string; quantity?: number; unitPrice?: number },
+  ) {
     return this.ordersService.update(id, body);
   }
 

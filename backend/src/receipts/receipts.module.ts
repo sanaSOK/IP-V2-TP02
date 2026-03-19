@@ -8,5 +8,6 @@ import { Receipt, ReceiptSchema } from '../databases/entities/receipts.entity';
   imports: [MongooseModule.forFeature([{ name: Receipt.name, schema: ReceiptSchema }])],
   controllers: [ReceiptsController],
   providers: [ReceiptsService],
+  exports: [ReceiptsService],
 })
 export class ReceiptsModule {}

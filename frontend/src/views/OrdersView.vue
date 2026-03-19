@@ -7,6 +7,7 @@ interface Order {
   id?: string
   item: string
   quantity: number
+  unitPrice?: number
 }
 
 const orders = ref<Order[]>([])
@@ -15,10 +16,12 @@ const success = ref('')
 
 const formItem = ref('')
 const formQuantity = ref<number | null>(null)
+const formUnitPrice = ref<number | null>(1)
 
 const editingId = ref<string | null>(null)
 const editingItem = ref('')
 const editingQuantity = ref<number | null>(null)
+const editingUnitPrice = ref<number | null>(null)
 
 async function loadOrders() {
   try {
@@ -37,6 +40,7 @@ async function createOrder() {
     await api.post('/orders', {
       item: formItem.value,
       quantity: formQuantity.value,
+      unitPrice: formUnitPrice.value ?? undefined,
     })
     formItem.value = ''
     formQuantity.value = null
@@ -52,6 +56,7 @@ function startEdit(o: Order) {
   editingId.value = o._id || o.id || null
   editingItem.value = o.item
   editingQuantity.value = o.quantity
+  editingUnitPrice.value = (o as any).unitPrice ?? 1
 }
 
 function cancelEdit() {
@@ -68,6 +73,7 @@ async function saveEdit() {
     await api.patch(`/orders/${editingId.value}`, {
       item: editingItem.value,
       quantity: editingQuantity.value,
+      unitPrice: editingUnitPrice.value ?? undefined,
     })
     success.value = 'Order updated'
     cancelEdit()
@@ -103,7 +109,7 @@ onMounted(loadOrders)
     <div class="card">
       <h2>New Order</h2>
       <form @submit.prevent="createOrder">
-        <div class="form-row" style="grid-template-columns: 1fr 1fr">
+        <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr">
           <div class="form-group">
             <label>Item</label>
             <input v-model="formItem" type="text" placeholder="Item name" required />
@@ -112,6 +118,10 @@ onMounted(loadOrders)
             <label>Quantity</label>
             <input v-model.number="formQuantity" type="number" min="1" placeholder="1" required />
           </div>
+            <div class="form-group">
+              <label>Unit Price</label>
+              <input v-model.number="formUnitPrice" type="number" min="0" step="0.01" placeholder="1.00" />
+            </div>
         </div>
         <button type="submit" class="btn btn-primary">Create Order</button>
       </form>
@@ -129,6 +139,7 @@ onMounted(loadOrders)
             <th>#</th>
             <th>Item</th>
             <th>Quantity</th>
+            <th>Unit Price</th>
             <th>Actions</th>
           </tr>
         </thead>
@@ -143,10 +154,14 @@ onMounted(loadOrders)
             <td v-else>
               <input v-model.number="editingQuantity" type="number" min="1" />
             </td>
+            <td v-if="editingId !== (o._id || o.id)">{{ (o as any).unitPrice ?? 1 }}</td>
+            <td v-else>
+              <input v-model.number="editingUnitPrice" type="number" min="0" step="0.01" />
+            </td>
             <td>
               <div v-if="editingId !== (o._id || o.id)">
                 <button class="btn btn-secondary" @click="startEdit(o)">Edit</button>
-                <button class="btn btn-danger" @click="deleteOrder(o._id || o.id)">Delete</button>
+                <button class="btn btn-danger" @click="deleteOrder(o._id || o.id || '')">Delete</button>
               </div>
               <div v-else>
                 <button class="btn btn-primary" @click="saveEdit">Save</button>

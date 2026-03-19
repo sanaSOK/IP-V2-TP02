@@ -8,6 +8,9 @@ export class Order extends Document {
 
   @Prop({ required: true })
   quantity: number;
+
+  @Prop({ required: false, default: 1 })
+  unitPrice: number;
 }
 
 export const OrderSchema = SchemaFactory.createForClass(Order);
