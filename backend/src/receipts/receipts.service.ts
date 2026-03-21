@@ -4,11 +4,20 @@ import { Model } from 'mongoose';
 import { Receipt } from '../databases/entities/receipts.entity';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 @Injectable()
 export class ReceiptsService {
   constructor(
+
+    @InjectRepository(Receipt)
+    private readonly receiptRepo: Repository<Receipt>,
+    private readonly notifications: NotificationsService, // ✅ DI
+
     @InjectModel(Receipt.name)
+
     private readonly receiptModel: Model<Receipt>,
   ) {}
 
@@ -28,7 +37,15 @@ export class ReceiptsService {
       name: dto.name,
       price: dto.price,
     });
-    return receipt.save();
+
+    const saved = await this.receiptRepo.save(receipt);
+
+    this.notifications.notify('receipt_created', {
+      receiptId: saved.receiptId,
+      price: saved.price,
+    }); 
+    
+    return saved;
   }
 
   async update(id: string, dto: UpdateReceiptDto) {
@@ -50,4 +67,6 @@ export class ReceiptsService {
     if (!receipt) throw new NotFoundException('Receipt not found');
     return { deleted: true, id };
   }
+
+
 }
