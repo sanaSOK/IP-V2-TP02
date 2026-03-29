@@ -1,15 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Order } from '../databases/entities/orders.entity';
 import { ReceiptsService } from '../receipts/receipts.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @InjectModel(Order.name)
     private readonly orderModel: Model<Order>,
+    @Inject(forwardRef(() => ReceiptsService))
     private readonly receiptsService: ReceiptsService,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async findAll() {
@@ -31,6 +35,14 @@ export class OrdersService {
       name: dto.item,
       price: dto.quantity * unitPrice,
     });
+
+    // notify interested parties
+    try {
+      this.notificationsService.notify('order_created', { order: saved });
+    } catch (e) {
+      // swallow notification errors so order creation still succeeds
+      console.warn('Notification failed', e);
+    }
 
     return saved;
   }

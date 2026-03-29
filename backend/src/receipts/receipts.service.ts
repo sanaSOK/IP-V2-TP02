@@ -1,24 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Receipt } from '../databases/entities/receipts.entity';
 import { CreateReceiptDto } from './dto/create-receipt.dto';
 import { UpdateReceiptDto } from './dto/update-receipt.dto';
 import { NotificationsService } from '../notifications/notifications.service';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 
 @Injectable()
 export class ReceiptsService {
   constructor(
 
-    @InjectRepository(Receipt)
-    private readonly receiptRepo: Repository<Receipt>,
-    private readonly notifications: NotificationsService, // ✅ DI
-
     @InjectModel(Receipt.name)
-
     private readonly receiptModel: Model<Receipt>,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notifications: NotificationsService, // ✅ DI
   ) {}
 
   async findAll() {
@@ -38,13 +33,13 @@ export class ReceiptsService {
       price: dto.price,
     });
 
-    const saved = await this.receiptRepo.save(receipt);
+    const saved = await receipt.save();
 
     this.notifications.notify('receipt_created', {
-      receiptId: saved.receiptId,
+      receiptId: saved._id,
       price: saved.price,
-    }); 
-    
+    });
+
     return saved;
   }
 
