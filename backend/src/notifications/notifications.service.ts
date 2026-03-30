@@ -4,75 +4,82 @@ import { OrdersService } from '../orders/orders.service';
 
 @Injectable()
 export class NotificationsService implements OnModuleInit {
-   
-    private readonly telegramToken = process.env.TELEGRAM_BOT_TOKEN || null;
-    private readonly telegramChatId = process.env.TELEGRAM_CHAT_ID || null;
+  private readonly telegramToken = process.env.TELEGRAM_BOT_TOKEN;
+  private readonly telegramChatId = process.env.TELEGRAM_CHAT_ID;
 
-    constructor(
-        @Inject(forwardRef(() => OrdersService))
-        private readonly ordersService: OrdersService,
-    ) {}
+  constructor(
+    @Inject(forwardRef(() => OrdersService))
+    private readonly ordersService: OrdersService,
+  ) {}
 
-    onModuleInit() {
-        // Email support removed. Telegram only.
-        if (this.telegramToken && this.telegramChatId) {
-            console.log('NotificationsService: Telegram configured');
-        } else {
-            console.warn('NotificationsService: Telegram not configured (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID)');
-        }
+  onModuleInit() {
+    if (this.telegramToken && this.telegramChatId) {
+      console.log('✅ Telegram is configured');
+    } else {
+      console.warn('⚠️ Telegram NOT configured');
+    }
+  }
+
+  async notify(event: string, payload: any) {
+    console.log(`[NOTIFY] ${event}`, payload);
+
+    if (event !== 'order_created') return { ok: true };
+
+    const order = payload?.order ?? payload;
+
+    return {
+      ok: true,
+      telegram: await this.sendTelegramMessage(order),
+    };
+  }
+
+  // 🔥 clean reusable function
+  private async sendTelegramMessage(order: any) {
+    if (!this.telegramToken || !this.telegramChatId) {
+      return { status: 'disabled' };
     }
 
-    async notify(event: string, payload: any) {
-        console.log(`[NOTIFY] ${event}`, payload);
+    try {
+      const message = this.formatMessage(order);
 
-        // Only act on order_created for now
-        if (event !== 'order_created') return { ok: true };
+      const url = `https://api.telegram.org/bot${this.telegramToken}/sendMessage`;
 
-        const order = payload?.order ?? payload;
-        const results: any = { ok: true };
+      const res = await axios.post(url, {
+        chat_id: this.telegramChatId,
+        text: message,
+        parse_mode: 'Markdown',
+      });
 
-        // Send Telegram if configured
-        if (this.telegramToken && this.telegramChatId) {
-            try {
-                const tgText = `New order created:\n${JSON.stringify(order)}`;
-                const url = `https://api.telegram.org/bot${this.telegramToken}/sendMessage`;
-                const resp = await axios.post(url, {
-                    chat_id: this.telegramChatId,
-                    text: tgText,
-                    parse_mode: 'Markdown',
-                });
-                console.log('Telegram notification sent', resp.data);
-                results.telegram = { status: 'sent', data: resp.data };
-            } catch (err) {
-                console.warn('Failed to send Telegram notification', err?.toString ? err.toString() : err);
-                results.telegram = { status: 'failed', error: String(err) };
-            }
-        } else {
-            results.telegram = { status: 'disabled' };
-        }
-
-        return results;
+      console.log('✅ Telegram sent');
+      return { status: 'sent', data: res.data };
+    } catch (error) {
+      console.error('❌ Telegram failed:', error.message);
+      return { status: 'failed', error: error.message };
     }
+  }
 
-    // send a test telegram message using supplied token/chatId (does not change env)
-    async sendTestTelegram(order: any, token?: string, chatId?: string) {
-        const usedToken = token || this.telegramToken;
-        const usedChat = chatId || this.telegramChatId;
-        if (!usedToken || !usedChat) {
-            return { ok: false, reason: 'telegram_not_configured' };
-        }
+  // ✨ better message format
+  private formatMessage(order: any): string {
+    const product = order?.item ?? order?.productName ?? 'Unknown';
+    const quantity = Number(order?.quantity ?? 1);
+    const unitPrice = Number(order?.unitPrice ?? order?.price ?? 1);
+    const total = (quantity * unitPrice).toFixed(2);
+    const date = order?.createdAt ? new Date(order.createdAt).toLocaleString() : new Date().toLocaleString();
 
-        try {
-            const tgText = `Test order notification:\n${JSON.stringify(order)}`;
-            const url = `https://api.telegram.org/bot${usedToken}/sendMessage`;
-            const resp = await axios.post(url, {
-                chat_id: usedChat,
-                text: tgText,
-                parse_mode: 'Markdown',
-            });
-            return { ok: true, telegram: { status: 'sent', data: resp.data } };
-        } catch (err) {
-            return { ok: false, telegram: { status: 'failed', error: String(err) } };
-        }
-    }
+    return `
+🛒 *New Order Created*
+
+
+📦 Product: ${product}
+➕ Quantity: ${quantity}
+💰 Unit price: $${unitPrice}
+🧾 Total: $${total}
+📅 Date: ${date}
+    `;
+  }
+
+  // 🧪 test function
+  async sendTestTelegram(order: any) {
+    return this.sendTelegramMessage(order);
+  }
 }
