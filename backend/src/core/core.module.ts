@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { EVENT_PUBLISHER } from '../core/tokens';
+import { EVENT_PUBLISHER } from './tokens';
 
 @Module({
   providers: [

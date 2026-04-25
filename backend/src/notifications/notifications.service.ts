@@ -1,85 +1,81 @@
-import { forwardRef, Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import axios from 'axios';
-import { OrdersService } from '../orders/orders.service';
+import { Inject, Injectable, Logger, forwardRef } from '@nestjs/common';
+import { EVENT_PUBLISHER } from 'src/core/tokens';
+import { TelegramService } from '../telegram/telegram.service';
+import { ReceiptsService } from '../receipts/receipts.service';
+
+type EventPublisher = { publish: (event: string, payload: any) => void };
 
 @Injectable()
-export class NotificationsService implements OnModuleInit {
-  private readonly telegramToken = process.env.TELEGRAM_BOT_TOKEN;
-  private readonly telegramChatId = process.env.TELEGRAM_CHAT_ID;
+export class NotificationsService {
+  private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
-    @Inject(forwardRef(() => OrdersService))
-    private readonly ordersService: OrdersService,
+    @Inject(EVENT_PUBLISHER)
+    private readonly publisher: EventPublisher,
+    private readonly telegramService: TelegramService,
+    @Inject(forwardRef(() => ReceiptsService))
+    private readonly receiptsService: ReceiptsService,
   ) {}
 
-  onModuleInit() {
-    if (this.telegramToken && this.telegramChatId) {
-      console.log('✅ Telegram is configured');
-    } else {
-      console.warn('⚠️ Telegram NOT configured');
-    }
+  notify(event: string, payload: any) {
+    this.publisher.publish(event, payload);
+    return { ok: true };
   }
 
-  async notify(event: string, payload: any) {
-    console.log(`[NOTIFY] ${event}`, payload);
-
-    if (event !== 'order_created') return { ok: true };
-
-    const order = payload?.order ?? payload;
-
-    return {
-      ok: true,
-      telegram: await this.sendTelegramMessage(order),
-    };
-  }
-
-  // 🔥 clean reusable function
-  private async sendTelegramMessage(order: any) {
-    if (!this.telegramToken || !this.telegramChatId) {
-      return { status: 'disabled' };
-    }
-
+  async notifyOrderCreated(orderData: {
+    id: string;
+    item: string;
+    quantity: number;
+    unitPrice: number;
+  }) {
     try {
-      const message = this.formatMessage(order);
+      // 📱 Send Telegram notification
+      const totalPrice = orderData.quantity * orderData.unitPrice;
+      const now = new Date();
+      const formattedDate = now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true,
+      });
+      const message = `
+      📦 *New Order Created*
+      ━━━━━━━━━━━━━━━━━━━━
+      Date: ${formattedDate}
+      Item: ${orderData.item}
+      Quantity: ${orderData.quantity}
+      Unit Price: $${orderData.unitPrice}
+      Total: $${totalPrice}
+      Order ID: \`${orderData.id}\`
+      ━━━━━━━━━━━━━━━━━━━━
+      `;
 
-      const url = `https://api.telegram.org/bot${this.telegramToken}/sendMessage`;
+      const telegramResult = await this.telegramService.sendMessage(message);
+      this.logger.log(`Telegram notification sent: ${telegramResult.status}`);
 
-      const res = await axios.post(url, {
-        chat_id: this.telegramChatId,
-        text: message,
-        parse_mode: 'Markdown',
+      // 🧾 Create receipt after notification
+      const receipt = await this.receiptsService.create({
+        issuedAt: new Date().toISOString(),
+        name: orderData.item,
+        price: totalPrice,
       });
 
-      console.log('✅ Telegram sent');
-      return { status: 'sent', data: res.data };
-    } catch (error) {
-      console.error('❌ Telegram failed:', error.message);
-      return { status: 'failed', error: error.message };
+      this.logger.log(`Receipt created: ${receipt._id}`);
+
+      return {
+        ok: true,
+        telegram: telegramResult,
+        receipt: receipt,
+      };
+    } catch (error: any) {
+      this.logger.error(`Error notifying order creation: ${error.message}`, error);
+      return {
+        ok: false,
+        error: error.message,
+      };
     }
-  }
-
-  // ✨ better message format
-  private formatMessage(order: any): string {
-    const product = order?.item ?? order?.productName ?? 'Unknown';
-    const quantity = Number(order?.quantity ?? 1);
-    const unitPrice = Number(order?.unitPrice ?? order?.price ?? 1);
-    const total = (quantity * unitPrice).toFixed(2);
-    const date = order?.createdAt ? new Date(order.createdAt).toLocaleString() : new Date().toLocaleString();
-
-    return `
-🛒 *New Order Created*
-
-
-📦 Product: ${product}
-➕ Quantity: ${quantity}
-💰 Unit price: $${unitPrice}
-🧾 Total: $${total}
-📅 Date: ${date}
-    `;
-  }
-
-  // 🧪 test function
-  async sendTestTelegram(order: any) {
-    return this.sendTelegramMessage(order);
   }
 }
