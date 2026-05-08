@@ -47,7 +47,7 @@ productsByCategory(
     return this.productService.create({
       name,
       price,
-      categoryId: Number(categoryId),
+      categoryId: Number(categoryId!),
     });
   }
 

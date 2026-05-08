@@ -1,0 +1,48 @@
+{
+  "products": [
+    {
+      "id": 1,
+      "name": "Laptop",
+      "price": 1200,
+      "categoryId": 1
+    },
+    {
+      "id": 2,
+      "name": "Mouse",
+      "price": 25,
+      "categoryId": 1
+    },
+    {
+      "id": 3,
+      "name": "JavaScript Book",
+      "price": 45,
+      "categoryId": 2
+    },
+    {
+      "id": 4,
+      "name": "apple",
+      "price": 9,
+      "categoryId": 2
+    },
+    {
+      "id": 5,
+      "name": "orange",
+      "price": 3,
+      "categoryId": 3
+    },
+    {
+      "id": 6,
+      "name": "orange",
+      "price": 3,
+      "categoryId": 3
+    },
+    {
+      "id": 7,
+      "name": "orange",
+      "price": 3,
+      "categoryId": 3
+    }
+    
+  ],
+  "nextProductId": 8
+}

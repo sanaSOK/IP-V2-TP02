@@ -1,0 +1,44 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Electronics"
+    },
+    {
+      "id": 2,
+      "name": "Books"
+    },
+    {
+      "id": 3,
+      "name": "computer"
+    }
+  ],
+  "products": [
+    {
+      "id": 1,
+      "name": "Laptop",
+      "price": 1200,
+      "categoryId": 1
+    },
+    {
+      "id": 2,
+      "name": "Mouse",
+      "price": 25,
+      "categoryId": 1
+    },
+    {
+      "id": 3,
+      "name": "JavaScript Book",
+      "price": 45,
+      "categoryId": 2
+    },
+    {
+      "id": 4,
+      "name": "apple",
+      "price": 9,
+      "categoryId": 2
+    }
+  ],
+  "nextCategoryId": 4,
+  "nextProductId": 5
+}

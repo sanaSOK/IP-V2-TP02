@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface Product {
   id: number;
@@ -7,52 +9,68 @@ export interface Product {
   categoryId: number;
 }
 
+interface ProductStore {
+  products: Product[];
+  nextProductId: number;
+}
+
 @Injectable()
 export class ProductService {
-  private products: Product[] = [
-    { id: 1, name: 'Laptop', price: 1200, categoryId: 1 },
-    { id: 2, name: 'Mouse', price: 25, categoryId: 1 },
-    { id: 3, name: 'JavaScript Book', price: 45, categoryId: 2 },
-  ];
-  private idCounter = 4;
+  private dataFilePath = path.join(process.cwd(), 'src/data/products.json');
+
+  private readData(): ProductStore {
+    const data = fs.readFileSync(this.dataFilePath, 'utf-8');
+    return JSON.parse(data);
+  }
+
+  private writeData(data: ProductStore): void {
+    fs.writeFileSync(this.dataFilePath, JSON.stringify(data, null, 2));
+  }
 
   findAll(): Product[] {
-    return this.products;
+    const data = this.readData();
+    return data.products;
   }
 
   findOne(id: number): Product | undefined {
-    return this.products.find((prod) => prod.id === id);
+    const data = this.readData();
+    return data.products.find((prod) => prod.id === id);
   }
 
   findByCategory(categoryId: number): Product[] {
-    return this.products.filter((prod) => prod.categoryId === categoryId);
+    const data = this.readData();
+    return data.products.filter((prod) => prod.categoryId === categoryId);
   }
 
-  
-
   create(data: { name: string; price: number; categoryId: number }): Product {
+    const store = this.readData();
     const product: Product = {
-      id: this.idCounter++,
+      id: store.nextProductId++,
       name: data.name,
       price: data.price,
       categoryId: data.categoryId,
     };
-    this.products.push(product);
+    store.products.push(product);
+    this.writeData(store);
     return product;
   }
 
   update(id: number, data: Partial<{ name: string; price: number; categoryId: number }>): Product | undefined {
-    const product = this.findOne(id);
+    const store = this.readData();
+    const product = store.products.find((prod) => prod.id === id);
     if (product) {
       Object.assign(product, data);
+      this.writeData(store);
     }
     return product;
   }
 
   delete(id: number): boolean {
-    const index = this.products.findIndex((prod) => prod.id === id);
+    const store = this.readData();
+    const index = store.products.findIndex((prod) => prod.id === id);
     if (index > -1) {
-      this.products.splice(index, 1);
+      store.products.splice(index, 1);
+      this.writeData(store);
       return true;
     }
     return false;

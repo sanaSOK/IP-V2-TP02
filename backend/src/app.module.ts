@@ -17,15 +17,13 @@ import { GraphqlModule } from './graphql/graphql.module';
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
 
-      // ✅ SCHEMA-FIRST
+      // SCHEMA-FIRST
       // typePaths: [join(process.cwd(), 'src/graphql/schema/*.graphql')],
+      // CODE-FIRST
       autoSchemaFile: join(
       process.cwd(),
       'src/graphql/schema.gql',
     ),
-
-      // ✅ CODE-FIRST (enable later)
-      // autoSchemaFile: join(process.cwd(), 'src/graphql/schema.gql'),
 
       playground: true,
     }),
